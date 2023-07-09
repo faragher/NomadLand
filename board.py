@@ -22,7 +22,7 @@ class MessageBoard:
 class Topic:
   def __init__(self,User,Title):
     buffer = Title.replace("`=","")
-    buffer = "`="+buffer+"`="
+    #buffer = "`="+buffer+"`="
     self.title = Title
     self.messages = []
     self.last_time = "No Data"
@@ -41,8 +41,13 @@ class Message:
     self.time = datetime.now().strftime("<%H%M/%d%b%Y>")
     self.deleted = False
     buffer = Payload.replace("`=","")
-    buffer = "`="+buffer+"`="
+    #buffer = "`="+buffer+"`="
     self.text = buffer
+    
+def San(p):
+  p=p.replace("`=","")
+  p=p.replace("`","")
+  return p
 
 #Debug Dummy Database
 DebugAddy = "f5a7233c612acb393f1c273b5b0366bc"
@@ -70,11 +75,13 @@ DebugAddy = "f5a7233c612acb393f1c273b5b0366bc"
 
 
 isAuthed = False
+isAdmin = False
 #message_board_peer = 'please_replace'
 message_board_name = "Between the Borders NomadLand Board"
 sysop_address = "f5a7233c612acb393f1c273b5b0366bc"
+sysop_ident =   "3de97d02f70f67612bcbfc2d32fa7da2"
 board_directory = "nomadland"
-board_base_url = "board2.mu"
+board_base_url = "board.mu"
 env_string = []
 userdir = os.path.expanduser("~")
 callsign = "Unidentified"
@@ -142,10 +149,16 @@ for e in os.environ:
 #    print("Set TargetBoard "+str(TargetBoard))
   if e == "var_TargetTopic":
     TargetTopic = int(os.environ[e])
+  if e == "var_TargetMessage":
+    TargetMessage = int(os.environ[e])
   if e == "var_MessageIndex":
     MessageIndex = int(os.environ[e])
   if e == "field_messagepayload":
     MessagePayload = os.environ[e]
+    
+if ID_hex != None:
+  if ID_hex == sysop_ident:
+    isAdmin = True
 
 print("`r"+datetime.now().strftime("%H:%M/%d%b%Y"))
 
@@ -156,6 +169,8 @@ if ID_hex == None:
 else:
   callsign = ID_hex[-8:]
   print("Identified as "+callsign)
+  if isAdmin:
+    print("ADMINISTRATOR")
   print("`a")
 
 
@@ -217,14 +232,20 @@ if interest == "Topics":
         Token = "Invalid"
       if(not Token in BoardDB[TargetBoard].bigot):
         isBoardAuthed = False
+      if isAdmin:
+        isBoardAuthed = True
     if isBoardAuthed:
       i = -1
       for TP in BoardDB[TargetBoard].topics:
         i = i+1
         if not TP.deleted:
 #          print(TP.title+" -- "+TP.creator)
-          print("`Ffb0`b`["+TP.title+"`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"|TargetTopic="+str(i)+"|interest=Messages] -- `["+TP.creator+"`lxmf@"+TP.creatoraddress+"`f`]")
+          print("``")
+          print("`Ffb0`b`["+San(TP.title)+"`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"|TargetTopic="+str(i)+"|interest=Messages]`f -- `["+TP.creator+"`lxmf@"+TP.creatoraddress+"`]")
           print("  Last activity: "+TP.last_time)
+          print(" ")
+          if isAdmin:
+            print("`Ff00`[DELETE`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"|TargetTopic="+str(i)+"|interest=DeleteTopic]`f")
 #          print("-")
 #          for M in TP.messages:
 #            print('`=')
@@ -266,7 +287,8 @@ if interest == "Messages":
         isBoardAuthed = False
     if isBoardAuthed:
       TP = BoardDB[TargetBoard].topics[TargetTopic]
-      print(TP.title)
+      print("``")
+      print(San(TP.title))
       print("-")
       currentindex = MessageIndex
       displayedmessages = 0
@@ -277,10 +299,12 @@ if interest == "Messages":
 #          print('`=')
           M = TP.messages[currentindex]
           if not M.deleted:
-            print(M.text)
+            print(San(M.text)) 
 #            print('`=')
             print("`r`["+M.callsign+"`lxmf@"+M.user+"`]"+M.time)
             print("`a")
+            if isAdmin:
+              print("`Ff00`[DELETE`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"|TargetTopic="+str(TargetTopic)+"|TargetMessage="+str(currentindex)+"|interest=DeleteMessage]`f")
             print("-")
             displayedmessages = displayedmessages+1
           currentindex = currentindex+1
@@ -342,11 +366,32 @@ if interest == "NewTopic":
     f.close()
     print("`Ffb0`c`[<<GO>>`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"interest=Topics]`f")
     print("``")
+    
+if interest == "DeleteTopic":
+  if isAdmin:
+    BoardDB[TargetBoard].topics[TargetTopic].deleted=True
+    f = open(boardpath, "wb")
+    f.write(pickle.dumps(BoardDB))
+    f.close()
+    print("Done")
+  else:
+    print("Unauthorized")
+    
+if interest == "DeleteMessage":
+  if isAdmin:
+    BoardDB[TargetBoard].topics[TargetTopic].messages[TargetMessage].deleted=True
+    f = open(boardpath, "wb")
+    f.write(pickle.dumps(BoardDB))
+    f.close()
+    print("Done")
+  else:
+    print("Unauthorized")
 
 
 # General Footer
 print(" ")
 print(" ")
+print("`Ffb0`[Home`:/page/board.mu`]`f")
 print("`Ffb0`[Notices`:/page/notices.mu`]`f")
 if sysop_address != "":
 	print("`Ffb0`[SYSOP`lxmf@"+sysop_address+"`]`f")
