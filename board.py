@@ -5,6 +5,7 @@ import os
 import RNS.vendor.umsgpack as msgpack
 from datetime import datetime
 import pickle
+import RNS
 
 
 class MessageBoard:
@@ -346,6 +347,11 @@ if interest == "Posting":
     if len(MessagePayload) > 750:
       MessagePayload = MessagePayload[:750]+"`Ff00<Message Truncated>`f"
     print(MessagePayload)
+    print("Identity "+ID_hex)
+    identity_hash = bytes.fromhex(ID_hex)
+    ID = RNS.Identity.recall(identity_hash)
+    LXMF_hex = RNS.prettyhexrep(RNS.Destination.hash_from_name_and_identity("lxmf.delivery",ID))
+    print("Expanded LXMF address "+LXMF_hex)
     BoardDB[TargetBoard].topics[TargetTopic].add(Message(ID_hex,MessagePayload))
     f = open(boardpath, "wb")
     f.write(pickle.dumps(BoardDB))
