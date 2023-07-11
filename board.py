@@ -347,12 +347,14 @@ if interest == "Posting":
     if len(MessagePayload) > 750:
       MessagePayload = MessagePayload[:750]+"`Ff00<Message Truncated>`f"
     print(MessagePayload)
-    print("Identity "+ID_hex)
+#    print("Identity "+ID_hex)
     identity_hash = bytes.fromhex(ID_hex)
-    ID = RNS.Identity.recall(identity_hash)
-    LXMF_hex = RNS.prettyhexrep(RNS.Destination.hash_from_name_and_identity("lxmf.delivery",ID))
-    print("Expanded LXMF address "+LXMF_hex)
-    BoardDB[TargetBoard].topics[TargetTopic].add(Message(ID_hex,MessagePayload))
+    ID = RNS.Destination.hash_from_name_and_identity("lxmf.delivery",identity_hash)
+    LXMF_hex = RNS.prettyhexrep(ID)
+    LXMF_hex = LXMF_hex.replace("<","")
+    LXMF_hex = LXMF_hex.replace(">","")
+#    print("Expanded LXMF address "+LXMF_hex)
+    BoardDB[TargetBoard].topics[TargetTopic].add(Message(LXMF_hex,MessagePayload))
     f = open(boardpath, "wb")
     f.write(pickle.dumps(BoardDB))
     f.close()
@@ -366,7 +368,12 @@ if interest == "NewTopic":
     if len(MessagePayload) > 60:
       MessagePayload = MessagePayload[:60]+"`Ff00<Message Truncated>`f"
     print(MessagePayload)
-    BoardDB[TargetBoard].add(Topic(ID_hex,MessagePayload))
+    identity_hash = bytes.fromhex(ID_hex)
+    ID = RNS.Destination.hash_from_name_and_identity("lxmf.delivery",identity_hash)
+    LXMF_hex = RNS.prettyhexrep(ID)
+    LXMF_hex = LXMF_hex.replace("<","")
+    LXMF_hex = LXMF_hex.replace(">","")
+    BoardDB[TargetBoard].add(Topic(LXMF_hex,MessagePayload))
     f = open(boardpath, "wb")
     f.write(pickle.dumps(BoardDB))
     f.close()
