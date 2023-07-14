@@ -2,50 +2,12 @@
 print("#!c=0")
 import time
 import os
-#import RNS.vendor.umsgpack as msgpack
 from datetime import datetime
-#import pickle
 import RNS
-#import configparser
 import sqlite3
 
 
-#class MessageBoard:
-#  def __init__(self, Name):
-#    self.name = Name
-#    self.members = False
-#    self.private = False
-#    self.topics = []
-#    self.bigot = []
-#    self.description = "Undefined Board"
-#
-#  def add(self, Topic):
-#    self.topics.append(Topic)#
-#
-#class Topic:
-#  def __init__(self,User,Title):
-#    buffer = Title.replace("`=","")
-#    #buffer = "`="+buffer+"`="
-#    self.title = Title
-#    self.messages = []
-#    self.last_time = "No Data"
-#    self.deleted = False
-#    self.creator = User[-8:]
-#    self.creatoraddress = User
-#
-#  def add(self,Message):
-#    self.messages.append(Message)
-#    self.last_time = datetime.now().strftime("%H%M/%d%b%Y")
 
-#class Message:
-#  def __init__(self, User, Payload):
-#    self.user = User
-#    self.callsign = User[-8:]
-#    self.time = datetime.now().strftime("<%H%M/%d%b%Y>")
-#    self.deleted = False
-#    buffer = Payload.replace("`=","")
-    #buffer = "`="+buffer+"`="
-#    self.text = buffer
     
 def San(p):
   p=p.replace("`=","")
@@ -62,7 +24,7 @@ def Footer():
     print("`Ffb0`[SYSOP`lxmf@"+sysop_address+"`]`f")
 
 
-#DebugAddy = "f5a7233c612acb393f1c273b5b0366bc"
+
 
 
 isAuthed = False
@@ -98,13 +60,6 @@ databasepath = storagepath+"/pages.db"
 #print(storagepath)
 
 if os.path.isfile(databasepath):
-#    f = open(boardpath, "rb")
-#    board_contents = msgpack.unpack(f)
-#    BoardDB = pickle.load(f)
-#    f.close()
-#    board_contents.reverse()
-#     pass
-#---
     pass
 else:
     print("Board is uninitialized")
@@ -156,24 +111,6 @@ else:
     
     
     print("Boards generated")
-    # Change these for custom initialization
-    #BoardDB = []
-    #DD = MessageBoard("General")
-    #DD.description = "Publicly viewable message board for general discussion and information."
-    #BoardDB.append(DD)
-    #DE = MessageBoard("Greatroom")
-    #DE.description = "A general gathering space and discussion area that requies users be authenticated prior to viewing."
-    #DE.members = True
-    #BoardDB.append(DE)
-    #DF = MessageBoard("Operations")
-    #DF.description="Private: For message board operations"
-    #DF.private = True
-    #DF.bigot.append("a22c2e8486a168a3b762d5a4b76a454f")
-    #DF.bigot.append("f5a7233c612acb393f1c273b5b0366bc")
-    #BoardDB.append(DF)
-    #f = open(boardpath, "wb")
-    #f.write(pickle.dumps(BoardDB))
-    #f.close()
     conn.close()
 
 
@@ -189,9 +126,7 @@ for e in os.environ:
     if interest == "None":
       interes = None
   if e == "var_TargetBoard":
-#    print("Found var_TargetBoard "+os.environ[e])
     TargetBoard = os.environ[e]
-#    print("Set TargetBoard "+str(TargetBoard))
   if e == "var_TargetTopic":
     TargetTopic = os.environ[e]
   if e == "var_TargetMessage":
@@ -227,18 +162,7 @@ print('-')
 print('`a`b`f')
 print("")
 
-#print("`b`[Evil Broken Test Link`:/page/board2.mu`TargetBoard=3|interest=Topics]")
 
-
-#print("To add a message to the board just converse with the NomadNet Message Board at `[lxmf@{}]".format(message_board_peer))
-#time_string = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()))
-#print("Last Updated: {}".format(time_string))
-
-#debug
-#interest = "Messages"
-#TargetBoard = "General"
-#TargetTopic = "555"
-#end debug
 
 # Display boards
 if interest==None or interest == "None":
@@ -254,14 +178,10 @@ if interest==None or interest == "None":
   result = cur.fetchall()
 
   for b in result:
-    #print(b)
     bName = b[0].replace("'","''")
     bDesc = b[1].replace("'","''")
     bClass = b[2]
-    #if result[3] != "":
     bBigot = b[3].split("|")
-    #for bb in bBigot:
-    #  print(bb)
     bDeleted = b[4]
     isBoardAuthed=True
     i=i+1
@@ -344,10 +264,8 @@ if interest == "Messages":
   query = "SELECT COUNT(*) FROM messages"+TargetBoard+" WHERE topichash ='"+TargetTopic+"' and deleted = '0'"
   cur.execute(query)
   messagecount = cur.fetchall()[0][0]
-#  print(messagecount)
   
   query = "SELECT message, creator, creatoraddress, timestamp FROM messages"+TargetBoard+" WHERE topichash ='"+TargetTopic+"' and deleted = '0' ORDER BY timestamp ASC LIMIT 10 OFFSET "+str(MessageIndex)
- # print(query)
   cur.execute(query)
   results = cur.fetchall()
   if len(results) == 0:
@@ -374,11 +292,7 @@ if interest == "Messages":
     #if len(TP.messages)>0:
     #  while doMessages and currentindex >= 0:
     for M in results:
-#        print('`=')
-#        M = TP.messages[currentindex]
-#        if not M.deleted:
       print(San(M[0])) 
-#        print('`=')
       print("`r`["+M[2][-8:]+"`lxmf@"+M[2]+"`]"+datetime.fromtimestamp(float(M[3])).strftime("<%H%M/%d%b%Y>"))
       print("`a")
       if isAdmin:
@@ -422,7 +336,6 @@ if interest == "Posting":
     LXMF_hex = RNS.prettyhexrep(ID)
     LXMF_hex = LXMF_hex.replace("<","")
     LXMF_hex = LXMF_hex.replace(">","")
-    # BoardDB[TargetBoard].topics[TargetTopic].add(Message(LXMF_hex,MessagePayload))
     query = "INSERT INTO messages"+TargetBoard.replace("'","''")+" (message, topichash, creator, creatoraddress, timestamp, deleted) values ('"+MessagePayload+"','"+TargetTopic+"','"+ID_hex+"','"+LXMF_hex+"','"+str(datetime.now().timestamp())+"',0)"
     cur.execute(query)
     conn.commit()
@@ -447,7 +360,6 @@ if interest == "NewTopic":
     LXMF_hex = RNS.prettyhexrep(ID)
     LXMF_hex = LXMF_hex.replace("<","")
     LXMF_hex = LXMF_hex.replace(">","")
-    #BoardDB[TargetBoard].add(Topic(LXMF_hex,MessagePayload))
     query = "INSERT INTO boards"+TargetBoard.replace("'","''")+" (title, hash, creator, creatoraddress, timestamp, deleted) VALUES ('"+MessagePayload+"','"+str(TopicHash)+"','"+ID_hex+"','"+LXMF_hex+"','"+str(datetime.now().timestamp())+"','0')"
     print(query)
     cur.execute(query)
