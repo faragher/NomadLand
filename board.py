@@ -361,7 +361,7 @@ if interest == "NewTopic":
     LXMF_hex = LXMF_hex.replace("<","")
     LXMF_hex = LXMF_hex.replace(">","")
     query = "INSERT INTO boards"+TargetBoard.replace("'","''")+" (title, hash, creator, creatoraddress, timestamp, deleted) VALUES ('"+MessagePayload+"','"+str(TopicHash)+"','"+ID_hex+"','"+LXMF_hex+"','"+str(datetime.now().timestamp())+"','0')"
-    print(query)
+    #print(query)
     cur.execute(query)
     #f = open(boardpath, "wb")
     #f.write(pickle.dumps(BoardDB))
