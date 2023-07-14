@@ -2,10 +2,12 @@
 print("#!c=0")
 import time
 import os
-import RNS.vendor.umsgpack as msgpack
+#import RNS.vendor.umsgpack as msgpack
 from datetime import datetime
-import pickle
+#import pickle
 import RNS
+#import configparser
+import sqlite3
 
 
 class MessageBoard:
@@ -49,35 +51,22 @@ def San(p):
   p=p.replace("`=","")
   p=p.replace("`","")
   return p
+  
+  # General Footer
+def Footer():
+  print(" ")
+  print(" ")
+  print("`Ffb0`[Home`:/page/board.mu`]`f")
+  print("`Ffb0`[Notices`:/page/notices.mu`]`f")
+  if sysop_address != "":
+    print("`Ffb0`[SYSOP`lxmf@"+sysop_address+"`]`f")
 
-#Debug Dummy Database
+
 DebugAddy = "f5a7233c612acb393f1c273b5b0366bc"
-#DDD = []
-#DD = MessageBoard("Debug Board")
-#DD.add(Topic(DebugAddy,"DebugTopic"))
-#DD.topics[0].creator = DebugAddy
-#DD.topics[0].add(Message(DebugAddy,"Debug Message"))
-#DD.add(Topic(DebugAddy,"DeletedTopic"))
-#for M in range(20):
-#  DD.topics[0].add(Message(DebugAddy,"Message "+str(M)))
-#DD.topics[0].messages[5].deleted = True
-#DD.topics[1].add(Message(DebugAddy,"Deleted Message"))
-#DD.topics[1].deleted = True
-#DDD.append(DD)
-#DE = MessageBoard("Members Only Board")
-#DE.members = True
-#DDD.append(DE)
-#DF = MessageBoard("Private Board")
-#DF.private = True
-#DF.bigot.append("a22c2e8486a168a3b762d5a4b76a454f")
-#DDD.append(DF)
-
-#End Debug
 
 
 isAuthed = False
 isAdmin = False
-#message_board_peer = 'please_replace'
 message_board_name = "Between the Borders NomadLand Board"
 sysop_address = "f5a7233c612acb393f1c273b5b0366bc"
 sysop_ident =   "3de97d02f70f67612bcbfc2d32fa7da2"
@@ -93,6 +82,7 @@ MessageIndex = 0
 MessageEndIndex = 0
 MessagePerPage = 10
 
+
 if os.path.isdir("/etc/"+board_directory) and os.path.isfile("/etc/"+board_directory+"/config"):
     configdir = "/etc/"+board_directory
 else:
@@ -102,35 +92,89 @@ storagepath  = configdir+"/storage"
 if not os.path.isdir(storagepath):
     os.makedirs(storagepath)
 
-boardpath = storagepath+"/boarddb"
-if os.path.isfile(boardpath):
-    f = open(boardpath, "rb")
+#boardpath = storagepath+"/boarddb"
+databasepath = storagepath+"/pages.db"
+
+print(storagepath)
+
+if os.path.isfile(databasepath):
+#    f = open(boardpath, "rb")
 #    board_contents = msgpack.unpack(f)
-    BoardDB = pickle.load(f)
-    f.close()
+#    BoardDB = pickle.load(f)
+#    f.close()
 #    board_contents.reverse()
 #     pass
+#---
+    pass
 else:
     print("Board is uninitialized")
-    print("Generating default boards")
+    import configparser
+    configfile = configparser.ConfigParser()
+    confforumname = "Incorrectly Configured Forum"
+    confadminhash = ""
+    confsysophash = ""
+    confmotd = "Please check your configuration and reinitialize the database!"
+    if os.path.isfile(storagepath+"/Config.ini"):
+        configfile.read(storagepath+"/Config.ini")
+        confforumname = configfile['Forum']['ForumName']
+        confadminhash = configfile['Forum']['ForumAdmin']
+        confsysophash = configfile['Forum']['ForumSysop']
+        confmotd = configfile['Forum']['MOTD']
+        
+    conn = sqlite3.connect(databasepath)
+    cur = conn.cursor()
+    query = "CREATE TABLE config (forumname TEXT, adminhash TEXT, sysophash TEXT, motd TEXT)"
+    cur.execute(query)
+    query = "CREATE TABLE boards (name TEXT, description TEXT, class TEXT, bigot TEXT, deleted INT)"
+    cur.execute(query)
+    #<-- YOU ARE HERE
+    cur.execute("INSERT INTO config (forumname, adminhash, sysophash, motd) VALUES (?,?,?,?)",(confforumname,confadminhash,confsysophash,confmotd))
+    conn.commit()
+
+    print("Board Config loaded")
+    if os.path.isfile(storagepath+"/Config.ini"):
+      configfile.read(storagepath+"/Config.ini")
+      #print("Board stuff")
+      boardlist = configfile['Boards']['Names'].split(",")
+      desclist = configfile['Boards']['Descriptions'].split(",")
+      classlist = configfile['Boards']['Class'].split(",")
+      bigotlist = configfile['Boards']['Bigot'].split(",")
+      deletedlist = configfile['Boards']['Deleted'].split(",")
+      for i in range(len(boardlist)):
+        bName = boardlist[i]
+        bDesc = desclist[i]
+        bClass = classlist[i]
+        bBigot = bigotlist[i]
+        bDeleted = deletedlist[i]
+        cur.execute("INSERT INTO boards (name, description, class, bigot, deleted) VALUES (?,?,?,?,?)",(bName,bDesc,bClass,bBigot,bDeleted))
+        query = "CREATE TABLE boards"+bName.replace("'","''")+" (title TEXT, hash TEXT, creator TEXT, creatoraddress TEXT, timestamp TEXT, deleted INT)"
+        cur.execute(query)
+        query = "CREATE TABLE messages"+bName.replace("'","''")+" (message TEXT, topichash TEXT, creator TEXT, creatoraddress TEXT, timestamp TEXT, deleted INT)"
+        cur.execute(query)
+        
+    conn.commit()
+    
+    
+    print("Boards generated")
     # Change these for custom initialization
-    BoardDB = []
-    DD = MessageBoard("General")
-    DD.description = "Publicly viewable message board for general discussion and information."
-    BoardDB.append(DD)
-    DE = MessageBoard("Greatroom")
-    DE.description = "A general gathering space and discussion area that requies users be authenticated prior to viewing."
-    DE.members = True
-    BoardDB.append(DE)
-    DF = MessageBoard("Operations")
-    DF.description="Private: For message board operations"
-    DF.private = True
-    DF.bigot.append("a22c2e8486a168a3b762d5a4b76a454f")
-    DF.bigot.append("f5a7233c612acb393f1c273b5b0366bc")
-    BoardDB.append(DF)
-    f = open(boardpath, "wb")
-    f.write(pickle.dumps(BoardDB))
-    f.close()
+    #BoardDB = []
+    #DD = MessageBoard("General")
+    #DD.description = "Publicly viewable message board for general discussion and information."
+    #BoardDB.append(DD)
+    #DE = MessageBoard("Greatroom")
+    #DE.description = "A general gathering space and discussion area that requies users be authenticated prior to viewing."
+    #DE.members = True
+    #BoardDB.append(DE)
+    #DF = MessageBoard("Operations")
+    #DF.description="Private: For message board operations"
+    #DF.private = True
+    #DF.bigot.append("a22c2e8486a168a3b762d5a4b76a454f")
+    #DF.bigot.append("f5a7233c612acb393f1c273b5b0366bc")
+    #BoardDB.append(DF)
+    #f = open(boardpath, "wb")
+    #f.write(pickle.dumps(BoardDB))
+    #f.close()
+    conn.close()
 
 
 
@@ -191,6 +235,10 @@ print("")
 #print("Last Updated: {}".format(time_string))
 
 #debug
+interest = "Messages"
+TargetBoard = "General"
+TargetTopic = "555"
+#end debug
 
 # Display boards
 if interest==None or interest == "None":
@@ -199,62 +247,76 @@ if interest==None or interest == "None":
   print(" ")
   print("    Be sure to read the notices.")
   i=-1
-  for BDB in BoardDB:
+  conn = sqlite3.connect(databasepath)
+  cur = conn.cursor()
+  query = "SELECT name, description, class, bigot, deleted FROM boards"
+  cur.execute(query)
+  result = cur.fetchall()
+
+  for b in result:
+    #print(b)
+    bName = b[0].replace("'","''")
+    bDesc = b[1].replace("'","''")
+    bClass = b[2]
+    #if result[3] != "":
+    bBigot = b[3].split("|")
+    #for bb in bBigot:
+    #  print(bb)
+    bDeleted = b[4]
     isBoardAuthed=True
     i=i+1
-    if(BDB.members and not isAuthed):
+    if(bClass == "Members" and not isAuthed):
       isBoardAuthed = False
-    if(BDB.private):
+    if(bClass == "Private"):
       if(isAuthed):
         Token = ID_hex
       else:
         Token = "Invalid"
-      if(not Token in BDB.bigot):
+      if(not Token in bBigot):
         isBoardAuthed = False
+    if bDeleted:
+      isBoardAuthed = False
     if isBoardAuthed:
       print(" ")
       print("``")
-      print("`Ffb0`["+BDB.name+"`:/page/"+board_base_url+"`TargetBoard="+str(i)+"|interest=Topics]`f")
-      print("``    "+BDB.description)
+      print("`Ffb0`["+bName+"`:/page/"+board_base_url+"`TargetBoard="+str(b[0])+"|interest=Topics]`f")
+      print("``    "+bDesc)
       print("``")
 
 # Display Topics
 if interest == "Topics":
-  if TargetBoard < 0 or TargetBoard > len(BoardDB)-1:
-    print("`Ff00Error: Attempted to view topics without a valid board`f")
+  conn = sqlite3.connect(databasepath)
+  cur = conn.cursor()
+  query = "SELECT title, hash, creator, creatoraddress, timestamp, deleted FROM boards"+TargetBoard+" WHERE deleted = '0' ORDER BY timestamp DESC"
+  cur.execute(query)
+  results = cur.fetchall()
+  query = "SELECT class, bigot FROM boards WHERE name ='"+TargetBoard+"'"
+  cur.execute(query)
+  boarddata = cur.fetchone()
+  if len(results) == 0:
+    print("`Ff00Error: Board is empty!`f")
   else:
     isBoardAuthed=True
-    if(BoardDB[TargetBoard].members and not isAuthed):
+    if(boarddata[0] == "Members" and not isAuthed):
       isBoardAuthed = False
-    if(BoardDB[TargetBoard].private):
+    if(boarddata[0] == "Private"):
       if(isAuthed):
         Token = ID_hex
       else:
         Token = "Invalid"
-      if(not Token in BoardDB[TargetBoard].bigot):
+      if(not Token in boarddata[1].split("|")):
         isBoardAuthed = False
       if isAdmin:
         isBoardAuthed = True
     if isBoardAuthed:
-      i = -1
-      for TP in BoardDB[TargetBoard].topics:
-        i = i+1
-        if not TP.deleted:
-#          print(TP.title+" -- "+TP.creator)
-          print("``")
-          print("`Ffb0`b`["+San(TP.title)+"`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"|TargetTopic="+str(i)+"|interest=Messages]`f -- `["+TP.creator+"`lxmf@"+TP.creatoraddress+"`]")
-          print("  Last activity: "+TP.last_time)
-          print(" ")
-          if isAdmin:
-            print("`Ff00`[DELETE`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"|TargetTopic="+str(i)+"|interest=DeleteTopic]`f")
-#          print("-")
-#          for M in TP.messages:
-#            print('`=')
-#            print(M.text)
-#            print('`=')
-#            print("`r"+M.user+M.time)
-#            print("`a")
-#            print("-")
+      for R in results:
+            print("``")
+            print("`Ffb0`b`["+San(R[0])+"`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"|TargetTopic="+R[1]+"|interest=Messages]`f -- `["+R[2]+"`lxmf@"+R[3]+"`]")
+            print("  Last activity: "+datetime.fromtimestamp(int(R[4])).strftime("%H%M/%d%b%Y"))
+            print(" ")
+            if isAdmin:
+              print("`Ff00`[DELETE`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"|TargetTopic="+R[1]+"|interest=DeleteTopic]`f")
+
     else:
       print("`Ff00You are not authorized to view this board`f")
     if isAuthed:
@@ -271,55 +333,60 @@ if interest == "Topics":
 
 # Display Messages
 if interest == "Messages":
-  if TargetBoard < 0 or TargetBoard > len(BoardDB)-1:
-    print("Error: Attempted to view topics without a valid board")
-  elif TargetTopic < 0 or TargetTopic > len(BoardDB[TargetBoard].topics):
-    print("Error: Attempted to view a non-existent topic")
+  conn = sqlite3.connect(databasepath)
+  cur = conn.cursor()
+  query = "SELECT class, bigot FROM boards WHERE name ='"+TargetBoard+"'"
+  cur.execute(query)
+  boarddata = cur.fetchone()
+  query = "SELECT title FROM boards"+TargetBoard+" WHERE hash = '"+TargetTopic+"'"
+  cur.execute(query)
+  topicdata = cur.fetchone()
+  #message TEXT, topichash TEXT, creator TEXT, creatoraddress TEXT, timestamp TEXT, deleted INT
+  query = "SELECT COUNT(*) FROM messages"+TargetBoard+" WHERE topichash ='"+TargetTopic+"' and deleted = '0'"
+  cur.execute(query)
+  messagecount = cur.fetchall()[0][0]
+  print(messagecount)
+  
+  query = "SELECT message, creator, creatoraddress, timestamp FROM messages"+TargetBoard+" WHERE topichash ='"+TargetTopic+"' and deleted = '0' ORDER BY timestamp DESC LIMIT 10 OFFSET "+str(MessageIndex)
+  print(query)
+  cur.execute(query)
+  results = cur.fetchall()
+  if len(results) == 0:
+    print("`Ff00Error: Topic is empty!`f")
   else:
     isBoardAuthed=True
-    if(BoardDB[TargetBoard].members and not isAuthed):
+    if(boarddata[0] == "Members" and not isAuthed):
       isBoardAuthed = False
-    if(BoardDB[TargetBoard].private):
+    if(boarddata[0] == "Private"):
       if(isAuthed):
         Token = ID_hex
       else:
         Token = "Invalid"
-      if(not Token in BoardDB[TargetBoard].bigot):
+      if(not Token in boarddata[1].split("|")):
         isBoardAuthed = False
+      if isAdmin:
+        isBoardAuthed = True
+
     if isBoardAuthed:
-      TP = BoardDB[TargetBoard].topics[TargetTopic]
       print("``")
-      print(San(TP.title))
+      print(San(topicdata[0]))
       print("-")
-      currentindex = MessageIndex
-      displayedmessages = 0
-      doMessages = True
-      if len(TP.messages)>0:
-        while doMessages and currentindex >= 0:
-#        for M in TP.messages:
-#          print('`=')
-          M = TP.messages[currentindex]
-          if not M.deleted:
-            print(San(M.text)) 
-#            print('`=')
-            print("`r`["+M.callsign+"`lxmf@"+M.user+"`]"+M.time)
-            print("`a")
-            if isAdmin:
-              print("`Ff00`[DELETE`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"|TargetTopic="+str(TargetTopic)+"|TargetMessage="+str(currentindex)+"|interest=DeleteMessage]`f")
-            print("-")
-            displayedmessages = displayedmessages+1
-          currentindex = currentindex+1
-          if currentindex == len(TP.messages):
-            doMessages = False
-            MessageEndIndex = currentindex
-          if displayedmessages > 9:
-            doMessages = False
-            MessageEndIndex = currentindex
-          if currentindex > 1000:
-            doMessages = False
-            print("Error, exceeded 1,000 messages in thread. Infinite loop? Terminating.")
-#      print("`rNext>>")
-      #DebugIf
+      #currentindex = MessageIndex
+      #displayedmessages = 0
+      #doMessages = True
+      #if len(TP.messages)>0:
+      #  while doMessages and currentindex >= 0:
+      for M in results:
+#        print('`=')
+#        M = TP.messages[currentindex]
+#        if not M.deleted:
+        print(San(M[0])) 
+#        print('`=')
+        print("`r`["+M[1]+"`lxmf@"+M[2]+"`]"+datetime.fromtimestamp(int(M[3])).strftime("<%H%M/%d%b%Y>"))
+        print("`a")
+        if isAdmin:
+          print("`Ff00`[DELETE`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"|TargetTopic="+str(TargetTopic)+"|TargetMessage="+str(currentindex)+"|interest=DeleteMessage]`f")
+        print("-")
       if isAuthed:
         print("Post Reply")
         print("`B333`<30|messagepayload`>")
@@ -331,10 +398,10 @@ if interest == "Messages":
 
 
       #endif
-      if MessageEndIndex < len(TP.messages):
+      if (MessageIndex + 10 < messagecount):
         print("`r`Ffb0`[NEXT>>`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"|TargetTopic="+str(TargetTopic)+"|MessageIndex="+str(MessageEndIndex)+"|interest=Messages]`f")
       print("``")
-      print("`[`Ffb0<<"+BoardDB[TargetBoard].name+"`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"|TargetTopic="+str(TargetTopic)+"|interest=Topics]`f")
+      print("`[`Ffb0<<"+topicdata[0]+"`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"|TargetTopic="+str(TargetTopic)+"|interest=Topics]`f")
       print("`[`Ffb0<<Board`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"|interest=None]`f")
 
     else:
@@ -346,18 +413,18 @@ if interest == "Posting":
   else:
     if len(MessagePayload) > 750:
       MessagePayload = MessagePayload[:750]+"`Ff00<Message Truncated>`f"
+    conn = sqlite3.connect(databasepath)
+    cur = conn.cursor()
     print(MessagePayload)
-#    print("Identity "+ID_hex)
     identity_hash = bytes.fromhex(ID_hex)
     ID = RNS.Destination.hash_from_name_and_identity("lxmf.delivery",identity_hash)
     LXMF_hex = RNS.prettyhexrep(ID)
     LXMF_hex = LXMF_hex.replace("<","")
     LXMF_hex = LXMF_hex.replace(">","")
-#    print("Expanded LXMF address "+LXMF_hex)
-    BoardDB[TargetBoard].topics[TargetTopic].add(Message(LXMF_hex,MessagePayload))
-    f = open(boardpath, "wb")
-    f.write(pickle.dumps(BoardDB))
-    f.close()
+    # BoardDB[TargetBoard].topics[TargetTopic].add(Message(LXMF_hex,MessagePayload))
+    query = "INSERT INTO messages"+bName.replace("'","''")+" (message, topichash, creator, creatoraddress, timestamp, deleted) values ('"+MessagePayload+"','"+TargetTopic+"','"+ID_hex+"','"+LXMF_hex+"','"+str(datetime.now())+"',0)"
+    cur.execute(query)
+    conn.commit()
     print("`Ffb0`c`[<<GO>>`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"|TargetTopic="+str(TargetTopic)+"|interest=Messages]`f")
     print("``")
 
@@ -368,24 +435,29 @@ if interest == "NewTopic":
     if len(MessagePayload) > 60:
       MessagePayload = MessagePayload[:60]+"`Ff00<Message Truncated>`f"
     print(MessagePayload)
+    conn = sqlite3.connect(databasepath)
+    cur = conn.cursor()
     identity_hash = bytes.fromhex(ID_hex)
+    TopicHash = RNS.Cryptography.sha256(ID_hex+str(datetime.now())+MessagePayload)
+    print(TopicHash)
     ID = RNS.Destination.hash_from_name_and_identity("lxmf.delivery",identity_hash)
     LXMF_hex = RNS.prettyhexrep(ID)
     LXMF_hex = LXMF_hex.replace("<","")
     LXMF_hex = LXMF_hex.replace(">","")
-    BoardDB[TargetBoard].add(Topic(LXMF_hex,MessagePayload))
-    f = open(boardpath, "wb")
-    f.write(pickle.dumps(BoardDB))
-    f.close()
+    #BoardDB[TargetBoard].add(Topic(LXMF_hex,MessagePayload))
+    query = "INSERT INTO boards"+bName.replace("'","''")+" (title, hash, creator, creatoraddress, timestamp, deleted) VALUES ('"+MessagePayload+"','"+TopicHash+"','"+ID_hex+"','"+LXMF_hex+"','"+str(datetime.now())+"','0')"
+    #f = open(boardpath, "wb")
+    #f.write(pickle.dumps(BoardDB))
+    #f.close()
     print("`Ffb0`c`[<<GO>>`:/page/"+board_base_url+"`TargetBoard="+str(TargetBoard)+"interest=Topics]`f")
     print("``")
     
 if interest == "DeleteTopic":
   if isAdmin:
     BoardDB[TargetBoard].topics[TargetTopic].deleted=True
-    f = open(boardpath, "wb")
-    f.write(pickle.dumps(BoardDB))
-    f.close()
+    #f = open(boardpath, "wb")
+    #f.write(pickle.dumps(BoardDB))
+    #f.close()
     print("Done")
   else:
     print("Unauthorized")
@@ -393,21 +465,15 @@ if interest == "DeleteTopic":
 if interest == "DeleteMessage":
   if isAdmin:
     BoardDB[TargetBoard].topics[TargetTopic].messages[TargetMessage].deleted=True
-    f = open(boardpath, "wb")
-    f.write(pickle.dumps(BoardDB))
-    f.close()
+    #f = open(boardpath, "wb")
+    #f.write(pickle.dumps(BoardDB))
+    #f.close()
     print("Done")
   else:
     print("Unauthorized")
 
 
-# General Footer
-print(" ")
-print(" ")
-print("`Ffb0`[Home`:/page/board.mu`]`f")
-print("`Ffb0`[Notices`:/page/notices.mu`]`f")
-if sysop_address != "":
-	print("`Ffb0`[SYSOP`lxmf@"+sysop_address+"`]`f")
+Footer()
 
 
 #end debug
